@@ -4,30 +4,40 @@ Build the Bruce Light (CYD-2432S028 JS-Lite) image and drop it for the web flash
 
 USAGE
 -----
-Run it from the repository root, or from firmware/ — anywhere it can find
-firmware/platformio.ini (its own directory is the most common case).
+Run it from anywhere inside the repository (e.g. from a GitHub Codespace on Ubuntu):
 
     python3 firmware/build_light_image.py           # from the repo root: setup + build + drop
     cd firmware && python3 build_light_image.py     # same thing, from inside firmware/
     python3 firmware/build_light_image.py --commit  # also git add + commit the drop-in
     python3 firmware/build_light_image.py --commit --push   # then push the commit to origin
     python3 firmware/build_light_image.py --dry-run # only print what it would do
+    python3 firmware/build_light_image.py --clean-penv  # delete ~/.platformio/penv first
+                                                       # (retry with a clean penv — see below)
 
 WHAT IT DOES
 ------------
 1. Locates the repository root (the directory holding firmware/platformio.ini).
-2. Creates .venv (if missing) and installs PlatformIO (idempotent).
-3. Runs `pio run -e CYD-2432S028-JSLITE` inside firmware/ (log: .tmp/pio-build.log).
-4. Verifies the merged image `firmware/Bruce-CYD-2432S028-JSLITE.bin` exists.
-5. Copies it to `docs/firmware/Bruce-CYD-2432S028-JSLITE.bin` — the file the web
+2. Creates .venv (if missing) and installs PlatformIO + uv.
+   - uv is required by the pioarduino platform-espressif32 penv setup; installing
+     it here means the penv can reuse the same venv's uv (avoids the
+     "uv installation via pip failed" fallback path).
+3. Pre-flights the environment: python >= 3.10, pip, git, network to PyPI.
+4. Runs `pio run -e CYD-2432S028-JSLITE` inside firmware/ (full log: .tmp/pio-build.log).
+5. On failure prints the tail of the log plus specific remediation hints.
+6. Verifies the merged image firmware/Bruce-CYD-2432S028-JSLITE.bin exists.
+7. Copies it to docs/firmware/Bruce-CYD-2432S028-JSLITE.bin — the file the web
    flasher serves — and prints size/SHA-256.
-6. Prints the next steps. Nothing is committed or pushed unless you pass --commit.
+   Nothing is committed or pushed unless you pass --commit.
 
-NOTE
-----
-The firmware/ image is a gitignored build artifact. The docs/firmware/ copy is
-the committed, published site artifact: the web flasher fetches it from
-https://hirugirl.github.io/Bruce-Beta/ and flashes it to the CYD at address 0x0.
+KNOWN FAILURE MODES (see .tmp/pio-build.log for the exact error)
+----------------------------------------------------------------
+- "Failed to install Python dependencies into penv" — the pioarduino platform's
+  penv setup could not install its python deps (usually network or a stale penv).
+  Fix: verify PyPI/github.com reachability from your Codespace, then rerun with
+  --clean-penv to rebuild the ~/.platformio/penv virtual environment from scratch.
+- SSL/certificate errors on github.com release-asset downloads — the sandbox
+  that created this script blocks those downloads; a Codespace is the
+  supported build environment for this image.
 """
 
 import argparse
@@ -38,7 +48,6 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-FIRMWARE_DIR_REL = "firmware"
 PIO_ENV = "CYD-2432S028-JSLITE"
 BIN_NAME = "Bruce-CYD-2432S028-JSLITE.bin"
 
@@ -68,6 +77,101 @@ def hash_file(path):
     return h.hexdigest()
 
 
+def venv_python(venv):
+    for candidate in (
+        venv / "bin" / "python",
+        venv / "Scripts" / "python.exe",
+        venv / "bin" / "python3",
+    ):
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def pip_ok(python):
+    """Check that the venv's python can import pip."""
+    try:
+        return subprocess.run(
+            [str(python), "-m", "pip", "--version"],
+            capture_output=True, text=True, timeout=60,
+        ).returncode == 0
+    except Exception:
+        return False
+
+
+def network_ok():
+    """Rough check for PyPI reachability (warns only — does not block)."""
+    try:
+        import urllib.request
+        urllib.request.urlopen("https://pypi.org/simple/", timeout=10)
+        return True
+    except Exception:
+        return False
+
+
+def preflight(venv, python):
+    print("\n[preflight] Environment check")
+    problems = []
+    ver = sys.version_info
+    print(f"  interpreter: {ver.major}.{ver.minor}.{ver.micro} ({sys.executable})")
+    if ver < (3, 10):
+        problems.append(f"Python >= 3.10 required (platform-espressif32 needs it), found {ver.major}.{ver.minor}")
+
+    if not pip_ok(python):
+        problems.append("venv python has no pip — install python3-venv (e.g. sudo apt-get install python3-venv)")
+
+    import shutil as _sh
+    if not _sh.which("git"):
+        problems.append("git not found on PATH")
+
+    if network_ok():
+        print("  network: pypi.org reachable")
+    else:
+        print("  network: WARNING — pypi.org is NOT reachable (build will likely fail)")
+
+    if problems:
+        print("  PREFLIGHT PROBLEMS:")
+        for p in problems:
+            print(f"   ! {p}")
+        print("  (continuing anyway — the build may still succeed)")
+
+
+def dump_log_tail(log_path, lines=200):
+    print(f"\n----- tail of {log_path} (last {lines} lines) -----", file=sys.stderr)
+    try:
+        tail = subprocess.run(
+            ["tail", "-n", str(lines), str(log_path)],
+            capture_output=True, text=True, timeout=30,
+        )
+        sys.stderr.write(tail.stdout)
+    except Exception as e:
+        sys.stderr.write(f"(could not print log tail: {e})\n")
+
+    print("\n----- likely underlying causes in the log -----", file=sys.stderr)
+    try:
+        out = subprocess.run(["grep", "-iE", "error|failed|warn|certificate|SSL|uv ", str(log_path)],
+                             capture_output=True, text=True, timeout=30).stdout
+        for line in out.splitlines()[-40:]:
+            print(f"  {line}", file=sys.stderr)
+    except Exception:
+        pass
+
+
+def remediation(log_path):
+    print("\nRemediation hints (see the full log for the exact error):", file=sys.stderr)
+    print("  1. If the log shows 'uv' errors or certificate/SSL errors:", file=sys.stderr)
+    print("       - confirm pypi.org and github.com are reachable from your Codespace", file=sys.stderr)
+    print("         (curl -v https://pypi.org/simple/  /  curl -I https://github.com)", file=sys.stderr)
+    print("       - rerun with: python3 firmware/build_light_image.py --clean-penv", file=sys.stderr)
+    print("  2. If the log shows 'No module named pip':", file=sys.stderr)
+    print("       - the system python lacks venv/pip: sudo apt-get install -y python3-venv", file=sys.stderr)
+    print("  3. A STALE or BROKEN ~/.platformio/penv (e.g. from an earlier failed run or", file=sys.stderr)
+    print("     a newer/older Python) can cause this too — --clean-penv removes it and", file=sys.stderr)
+    print("     recreates it from scratch.", file=sys.stderr)
+    print("  4. The URL-pinned platform download (github.com release assets) is blocked in", file=sys.stderr)
+    print("     the build sandbox; builds must happen in a Codespace.", file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build the Bruce Light (CYD-2432S028 JS-Lite) firmware image.",
@@ -79,6 +183,8 @@ def main():
                         help="push the commit (requires --commit)")
     parser.add_argument("--dry-run", action="store_true",
                         help="print the steps and exit")
+    parser.add_argument("--clean-penv", action="store_true",
+                        help="delete ~/.platformio/penv before building (recreates it from scratch)")
     args = parser.parse_args()
     if args.push and not args.commit:
         fail("--push requires --commit")
@@ -92,7 +198,7 @@ def main():
     print(f"Repository: {root}")
     if args.dry_run:
         print("\n[dry-run] would do:")
-        print("  1. create .venv (if missing) + pip install platformio")
+        print("  1. create .venv (if missing) + pip install platformio + uv")
         print(f"  2. pio run -e {PIO_ENV}    (cwd={firmware_dir})")
         print(f"  3. verify {bin_path} exists")
         print(f"  4. copy to {docs_bin}")
@@ -103,26 +209,49 @@ def main():
                 print("  + git push origin HEAD")
         return
 
-    # 1. venv + platformio
+    # 1. venv + platformio (+ uv; the platform's penv setup reuses it)
     venv = root / ".venv"
     if not (venv / "pyvenv.cfg").is_file():
         print("\n[1/5] Creating .venv")
         r = run([sys.executable, "-m", "venv", venv], cwd=root)
         if r.returncode != 0:
-            fail("venv creation failed — is python3-venv installed?")
+            fail("venv creation failed — is python3-venv installed? (sudo apt-get install -y python3-venv)")
 
-    python = next((p for p in (venv / "bin" / "python", venv / "Scripts" / "python.exe",
-                              venv / "bin" / "python3") if p.exists()), None)
+    python = venv_python(venv)
     if python is None:
         fail(f"venv python not found in {venv}")
 
-    print("\n[1/5] Installing PlatformIO")
-    r = run([python, "-m", "pip", "install", "--upgrade", "platformio"])
+    print("\n[1/5] Installing PlatformIO + uv")
+    r = run([python, "-m", "pip", "install", "--upgrade", "platformio", "uv"])
     if r.returncode != 0:
         fail("pip install platformio failed")
 
-    pio = next((p for p in (venv / "bin" / "pio", venv / "Scripts" / "pio.exe") if p.exists()), None)
+    pio = venv / "bin" / "pio"
+    if not pio.exists():
+        pio_modules = [venv / "Scripts" / "platformio"]
+        pio = pio_modules[0] if pio_modules[0].exists() else None
     pio_cmd = [str(pio)] if pio else [str(python), "-m", "platformio"]
+
+    print("\n[preflight] Tool versions")
+    subprocess.run([*pio_cmd, "--version"], capture_output=False, check=False)
+    if (venv / "bin" / "uv").exists():
+        subprocess.run([str(venv / "bin" / "uv"), "--version"], capture_output=False, check=False)
+    elif (venv / "Scripts" / "uv.exe").exists():
+        subprocess.run([str(venv / "Scripts" / "uv.exe"), "--version"], capture_output=False, check=False)
+    else:
+        print("  WARNING: uv not found in .venv — the platform's penv setup may fall")
+        print("  back to 'pip install uv', which is the common source of penv failures.")
+        print("  Try: .venv/bin/pip install uv")
+
+    preflight(venv, python)
+
+    # Optional: clear stale platformio penv
+    if args.clean_penv:
+        penv = Path.home() / ".platformio" / "penv"
+        if penv.is_dir():
+            print(f"\n[1/5] Removing stale penv at {penv}")
+            shutil.rmtree(penv, ignore_errors=True)
+        print("      (recreated by the build)")
 
     # 2. Build
     log_dir = root / ".tmp"
@@ -138,11 +267,10 @@ def main():
             check=False,
         )
     if r.returncode != 0:
-        print("\nBuild FAILED — tail of log:", file=sys.stderr)
-        tail = subprocess.run(["tail", "-100", str(log_path)], capture_output=True, text=True)
-        print(tail.stdout, file=sys.stderr)
-        print(f"Full log: {log_path}", file=sys.stderr)
-        fail("pio build failed — see log above")
+        print("\nBuild FAILED", file=sys.stderr)
+        dump_log_tail(log_path, 200)
+        remediation(log_path)
+        fail("pio build failed — see the log tail above")
 
     print(f"  full log saved to {log_path}")
 
