@@ -2,7 +2,7 @@
 // Bruce Light — CYD-2432S028 web flasher configuration
 //
 // Where to find the Light (JS-Lite) firmware image:
-//   Build it from this repo (env CYD-2432S028-JSLITE) — see website/README.md —
+//   Build it from this repo (env CYD-2432S028-JSLITE) — see docs/README.md —
 //   then either:
 //     (a) drop the produced .bin into docs/firmware/ and keep this URL as-is
 //         (same-origin → no CORS, fully offline-capable), or

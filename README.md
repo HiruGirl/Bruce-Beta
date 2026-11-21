@@ -43,11 +43,22 @@ used — do **not** flash without the partition table unless you also flash that
 
 ## Web flasher
 
-`docs/` contains a single-page web flasher (esptool-js + Web Serial) that works from
-a GitHub Pages deployment of this repository. To serve it:
+`docs/` contains a single-page web flasher (esptool-js + Web Serial) that is served
+by GitHub Pages via `.github/workflows/static.yml` (Deploy static content to Pages).
+On every push to `main`, the workflow builds a static artifact from `docs/` and
+deploys it — no manual Pages settings to touch.
 
-1. Enable Pages in **Settings → Pages**, source = **branch `main` → folder `/docs`**,
-2. (after merging) open the site, plug your CYD in, flash.
+To publish the flasher:
+
+1. Merge this PR (and the fixed `static.yml` workflow) into `main`.
+2. The `Deploy static content to Pages` workflow runs automatically and serves
+   `docs/index.html` at `https://hirugirl.github.io/Bruce-Beta/`.
+3. Open the site, plug your CYD in, flash.
+
+To actually fly the flasher, build the light image
+(`../.venv/bin/pio run -e CYD-2432S028-JSLITE` inside `firmware/`), drop
+`Bruce-CYD-2432S028-JSLITE.bin` into `docs/firmware/`, commit and push. Pages
+will serve it — the flasher will then fetch and flash it.
 
 See `docs/README.md` for the full workflow.
 

@@ -47,12 +47,13 @@ BLE Keyboard stack), but USB HID is not wired on this board.
 ## Pushing and publishing
 
 ```bash
-git push origin arena/378c7cd8-bruce-beta
-gh pr create
+git push origin <your-branch>   # then open the PR (or merge into main)
 ```
 
-Then enable GitHub Pages (repository → Settings → Pages → Deploy from branch → `main` branch → folder `/docs`).
-That publishes `docs/index.html`. No workflows needed; Pages serves static files from the branch directly.
+Publishing is automatic on every push to `main`:
+`.github/workflows/static.yml` (Deploy static content to Pages) builds a static
+artifact from `docs/` and deploys it. Remove the jekyll workflow (we keep only
+the static one). The site is live at `https://hirugirl.github.io/Bruce-Beta/`.
 
 ## Flasher details
 
@@ -63,14 +64,11 @@ That publishes `docs/index.html`. No workflows needed; Pages serves static files
   (e.g. a GitHub release asset) — the flasher will fetch it from the browser.
 - Web Serial must be available (Chrome/Edge on desktop; not Safari).
 
-## Why the light build is not in git
+## Why the light build is not in git — actually it is
 
-The bin is a build artifact. If you want it in git:
-
-```bash
-git add docs/firmware/Bruce-CYD-2432S028-JSLITE.bin
-git commit -m "Add JS-Lite build for CYD-2432S028"
-git push
-```
-
-…and re-publish at Pages settings (no toolchain required — Pages serves static files).
+The built bin IS committed under `docs/firmware/` (build artifacts in the build
+tree are ignored, but the published one is not). Once it exists on `main`, the
+Pages deployment serves it and the flasher fetches it same-origin. (You can keep
+it out of git with `git rm -r --cached docs/firmware` if you prefer to host the
+bin elsewhere; the flasher fetches whatever `FIRMWARE_URL` in
+`docs/assets/config.js` points at.)

@@ -5,10 +5,10 @@
 upstream/
 **/node_modules/
 
-# Merged firmware images are build artifacts
-*.bin
+# Merged firmware images in the build tree are artifacts
 firmware/Bruce-*.bin
-docs/firmware/
+# BUT: docs/firmware/ is the published site - the .bin there is a deploy artifact
+# and should be committed so Pages serves it.
 
 # Editor state
 .vscode/
