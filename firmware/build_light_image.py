@@ -22,10 +22,15 @@ WHAT IT DOES
      it here means the penv can reuse the same venv's uv (avoids the
      "uv installation via pip failed" fallback path).
 3. Pre-flights the environment: python >= 3.10, pip, git, network to PyPI.
-4. Runs `pio run -e CYD-2432S028-JSLITE` inside firmware/ (full log: .tmp/pio-build.log).
-5. On failure prints the tail of the log plus specific remediation hints.
-6. Verifies the merged image firmware/Bruce-CYD-2432S028-JSLITE.bin exists.
-7. Copies it to docs/firmware/Bruce-CYD-2432S028-JSLITE.bin — the file the web
+4. Smoke-tests the platform's penv setup IN A SCRATCH DIR with visible uv output
+   (mirrors builder/penv_setup.py: uv venv -> external uv or pip fallback installs
+   uv -> the dependency install). The platform hides its uv output behind --quiet,
+   so this is the fastest way to see the REAL error if the Codespace fails here.
+   The smoke test fails fast with the visible error if the platform's own step would.
+5. Runs `pio run -e CYD-2432S028-JSLITE` inside firmware/ (full log: .tmp/pio-build.log).
+6. On failure prints the tail of the log plus specific remediation hints.
+7. Verifies the merged image firmware/Bruce-CYD-2432S028-JSLITE.bin exists.
+8. Copies it to docs/firmware/Bruce-CYD-2432S028-JSLITE.bin — the file the web
    flasher serves — and prints size/SHA-256.
    Nothing is committed or pushed unless you pass --commit.
 
@@ -172,6 +177,84 @@ def remediation(log_path):
     print("     the build sandbox; builds must happen in a Codespace.", file=sys.stderr)
 
 
+PENVSMOKE_DEPS = [
+    "pioarduino>=6.1.19",
+    "littlefs-python>=0.16.0",
+    "fatfs-ng>=0.1.14",
+    "pyyaml>=6.0.2",
+    "rich-click>=1.8.6",
+    "zopfli>=0.2.2",
+    "intelhex>=2.3.0",
+    "rich>=14.0.0",
+    "cryptography>=45.0.3",
+    "certifi>=2025.8.3",
+    "ecdsa>=0.19.1",
+    "bitstring>=4.3.1",
+    "reedsolo>=1.5.3,<1.8",
+    "esp-idf-size>=2.0.0",
+    "esp-coredump>=1.14.0",
+    "pyelftools>=0.32",
+]
+
+
+def smoke_test_penv(venv, python, root):
+    """
+    Replicate the platform's penv setup in a scratch dir — WITHOUT the platform's
+    --quiet flags — so that a Codespace failure prints the REAL underlying error.
+    Mirrors pioarduino/platform-espressif32's builder/penv_setup.py exactly.
+    """
+    uv = venv / "bin" / "uv"
+    if not uv.exists():
+        uv = venv / "Scripts" / "uv.exe"
+    if not uv.exists():
+        print("\n[2/6] uv not found in .venv — skipping penv smoke test\n")
+        return True
+
+    # uv venv --clear --python=<python> <penv>   (platform: setup_pipenv_in_package)
+    smoke_dir = root / ".tmp" / "penv-smoke"
+    smoke_dir.parent.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(smoke_dir, ignore_errors=True)
+
+    print("\n[2/6] Smoke-testing platform penv setup (visible uv output)")
+    print("  mirroring builder/penv_setup.py of the pinned platform ...")
+    r = run([str(uv), "venv", "--clear", f"--python={python}", smoke_dir], cwd=root)
+    if r.returncode != 0:
+        print("  WARNING: uv venv failed — the platform would fail here too", file=sys.stderr)
+
+    penv_py = smoke_dir / "bin" / "python"
+    if not penv_py.is_file():
+        print("  WARNING: penv python missing — continuing anyway", file=sys.stderr)
+        return True
+
+    # Platform: external uv installs uv into the penv (fallback allowed)
+    r = run([str(uv), "pip", "install", "uv>=0.1.0", f"--python={penv_py}"], cwd=root)
+    if r.returncode != 0:
+        print("  (platform behavior: external uv failed — falling back to pip)")
+        # Platform: pip fallback installs uv into the penv
+        run([str(penv_py), "-m", "ensurepip", "--default-pip"], cwd=root)
+        r = run([str(penv_py), "-m", "pip", "install", "uv>=0.1.0", "--no-cache-dir"], cwd=root)
+        if r.returncode != 0:
+            print("  WARNING: pip fallback failed — the platform would fail here too", file=sys.stderr)
+
+    penv_uv = smoke_dir / "bin" / "uv"
+    if not penv_uv.is_file():
+        print("  WARNING: penv uv not found — the dep-install gate below would be skipped", file=sys.stderr)
+        shutil.rmtree(smoke_dir, ignore_errors=True)
+        return True
+
+    # Platform: install the deps via penv uv --quiet --upgrade   (the step that fails)
+    print("\n  [2/6] penv dependency install (this is where the platform fails in Codespaces)")
+    r = run([str(penv_uv), "pip", "install", f"--python={penv_py}", "--upgrade", *PENVSMOKE_DEPS], cwd=root)
+    shutil.rmtree(smoke_dir, ignore_errors=True)
+    if r.returncode != 0:
+        print("\n  *** penv dependency install FAILED — the real error is printed above ***", file=sys.stderr)
+        print("  *** this is the step behind the 'Failed to install Python dependencies into penv' error ***", file=sys.stderr)
+        return False
+
+    print("\n  penv smoke test OK")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build the Bruce Light (CYD-2432S028 JS-Lite) firmware image.",
@@ -212,7 +295,7 @@ def main():
     # 1. venv + platformio (+ uv; the platform's penv setup reuses it)
     venv = root / ".venv"
     if not (venv / "pyvenv.cfg").is_file():
-        print("\n[1/5] Creating .venv")
+        print("\n[1/6] Creating .venv")
         r = run([sys.executable, "-m", "venv", venv], cwd=root)
         if r.returncode != 0:
             fail("venv creation failed — is python3-venv installed? (sudo apt-get install -y python3-venv)")
@@ -221,7 +304,7 @@ def main():
     if python is None:
         fail(f"venv python not found in {venv}")
 
-    print("\n[1/5] Installing PlatformIO + uv")
+    print("\n[1/6] Installing PlatformIO + uv")
     r = run([python, "-m", "pip", "install", "--upgrade", "platformio", "uv"])
     if r.returncode != 0:
         fail("pip install platformio failed")
@@ -249,15 +332,22 @@ def main():
     if args.clean_penv:
         penv = Path.home() / ".platformio" / "penv"
         if penv.is_dir():
-            print(f"\n[1/5] Removing stale penv at {penv}")
+            print(f"\n[1/6] Removing stale penv at {penv}")
             shutil.rmtree(penv, ignore_errors=True)
         print("      (recreated by the build)")
+
+    # Optional: smoke-test the penv setup with visible uv output
+    if not smoke_test_penv(venv, python, root):
+        print("\nThe platform will fail at the same step. Fix the environment above, then retry.", file=sys.stderr)
+        print("Most likely causes: blocked PyPI/network access, a broken/stale penv, or a broken uv binary.", file=sys.stderr)
+        print("Use --clean-penv to recreate the penv from scratch and retry.", file=sys.stderr)
+        sys.exit(1)
 
     # 2. Build
     log_dir = root / ".tmp"
     log_dir.mkdir(exist_ok=True)
     log_path = log_dir / "pio-build.log"
-    print(f"\n[2/5] Building {PIO_ENV} (log: {log_path})")
+    print(f"\n[3/6] Building {PIO_ENV} (log: {log_path})")
     with open(log_path, "w") as log:
         r = subprocess.run(
             [*pio_cmd, "run", "-e", PIO_ENV],
@@ -275,7 +365,7 @@ def main():
     print(f"  full log saved to {log_path}")
 
     # 3. Verify
-    print("\n[3/5] Verifying merged image")
+    print("\n[4/6] Verifying merged image")
     if not bin_path.is_file():
         fail(f"expected {bin_path} not found after a successful build")
     size = bin_path.stat().st_size
@@ -284,7 +374,7 @@ def main():
         print("  WARNING: image is unexpectedly small")
 
     # 4. Drop into docs/firmware/
-    print("\n[4/5] Dropping into docs/firmware/")
+    print("\n[5/6] Dropping into docs/firmware/")
     docs_bin_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(bin_path, docs_bin)
     digest = hash_file(docs_bin)
@@ -292,7 +382,7 @@ def main():
     print(f"  sha256={digest}")
 
     # 5. Report
-    print("\n[5/5] Build complete")
+    print("\n[6/6] Build complete")
     print("\nNext steps:")
     print("  1. Commit the published drop-in:")
     print("       git add docs/firmware/Bruce-CYD-2432S028-JSLITE.bin")
