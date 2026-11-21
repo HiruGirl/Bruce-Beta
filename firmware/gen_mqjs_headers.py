@@ -27,7 +27,7 @@ CFLAGS = [
 
 HOST_CC = "gcc"
 
-INCLUDES = [
+INCLUDES_ALL = [
     'user_classes_js',
     'buffer_js',
     'audio_js',
@@ -55,6 +55,29 @@ INCLUDES = [
     'uart_js',
     'wifi_js',
 ]
+
+# The trimmed light build (JS_MINI) keeps only the WiFi/BLE/JS-interpreter
+# stdlib surface; the natives whose modules are excluded are neither
+# declared nor registered, so their source files can be compiled out too.
+INCLUDES_KEEP = [
+    'user_classes_js',
+    'buffer_js',
+    'ble_js',
+    'device_js',
+    'display_js',
+    'dialog_js',
+    'globals_js',
+    'keyboard_js',
+    'math_js',
+    'menu_js',
+    'notification_js',
+    'runtime_js',
+    'storage_js',
+    'wifi_js',
+]
+
+def INCLUDES_for():
+    return INCLUDES_KEEP if _has_define("JS_MINI") else INCLUDES_ALL
 
 def sha256_file(path):
     h = hashlib.sha256()
@@ -88,6 +111,25 @@ def _has_define(name: str) -> bool:
         if isinstance(define, list) and define and define[0] == name:
             return True
     return False
+
+def _host_defines():
+    # Pass the project's plain-identifier defines (e.g. JS_MINI, KEEP_JS) to the
+    # host generator compile so the #if guards in mqjs_stdlib.c evaluate exactly
+    # as they do for the target build. Value-carrying defines are irrelevant here.
+    try:
+        flags = env.ParseFlags(env['BUILD_FLAGS'])
+    except Exception:
+        return []
+    import re
+    defines = []
+    for define in flags.get('CPPDEFINES', []):
+        # A define is either a plain identifier or a list [name, value].
+        # Values are irrelevant here -- the .c only needs defined() to fire --
+        # so we always pass the plain -D<name> form.
+        name = define[0] if isinstance(define, (list, tuple)) and define else define
+        if isinstance(name, str) and re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
+            defines.append("-D" + name)
+    return defines
 
 def _gen_enabled() -> bool:
     # Default to enabled for backward compatibility.
@@ -188,7 +230,7 @@ def generate_headers():
             sub_env["PATH"] = cc_dir + os.pathsep + sub_env.get("PATH", "")
 
         gcc_result = subprocess.run(
-            [host_cc, *CFLAGS, "-o", GEN, *SRC],
+            [host_cc, *_host_defines(), *CFLAGS, "-o", GEN, *SRC],
             capture_output=True,
             text=True,
             env=sub_env,
@@ -209,7 +251,7 @@ def generate_headers():
 
         with open(os.path.join(BJS_INTERPRETER_PATH, "mqjs_stdlib.h"), "w") as f:
             result = subprocess.run([GEN, "-m32"], capture_output=True, text=True, check=True, env=sub_env)
-            for line in INCLUDES:
+            for line in INCLUDES_for():
                 f.write(f'#include "{line}.h"\n')
             f.write("\n")
             f.write(result.stdout)

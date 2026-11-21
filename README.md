@@ -11,15 +11,25 @@ attack/tooling surface hidden.
 | --- | --- |
 | WiFi (AP + station) | RF/SubGHz, NRF24, IR, RFID, GPS, LoRa, FM, Ethernet, SDR, packet sniffers, DoS/evil-twin attack menus |
 | BLE | BadUSB menu, microphone, iButton, HID submenus, SSH/Telnet/SOCKS4/Sniff/Scan/NetCut/Responder/Netcut (split list above) |
-| JS Interpreter (mquickjs) | Launcher-only metadata (`LAUNCHER_*`) |
+| JS Interpreter (mquickjs) + App Store | Launcher-only metadata (`LAUNCHER_*`) |
 | Settings | Filesharing via ESP-NOW |
 | Clock (startup app) | file-sharing |
 | Others (QR codes, Megalodon) | WiFi Pass Recovery, WiFite, BLE Suite |
 
 The light build keeps the interpreter fully functional — it is just not the
-"official" story: the interpreter natives (BadUSB, audio, BLE Spam) compile like
-upstream, but the user-facing menus, start-up apps and config switches for those
-features are removed. Use an unsupported-feature build to inspect them.
+"official" story: the kept interpreter surface (device, display, dialog,
+keyboard, notification, runtime, storage, wifi, ble, menu, math, globals, buffer,
+and the Timers/Sprite/TextViewer/Gif/Buffer user classes) compiles exactly like
+upstream, but the dropped modules (audio, badusb, ir, subghz, serial, gpio, uart,
+mic, rfid, nrf24, led, i2c) are compiled out and hidden, and the user-facing menus,
+start-up apps and config switches for those features are removed. Use an
+unsupported-feature build to inspect them.
+
+The App Store is kept: `Config → Install App Store` downloads `App Store.bin`
+into `/BruceJS/Tools/` and it runs via `JS Interpreter → Tools`. The interpreter
+heap heuristic is raised (largest free block minus 8 KiB, capped at 100 KiB) so
+the App Store has room to run on a no-PSRAM CYD — watch `device.free_heap` (or
+`device.getFreeHeapSize()`) after an install to see the headroom left.
 
 ## Building
 

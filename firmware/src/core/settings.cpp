@@ -8,13 +8,17 @@
 #endif
 #include "modules/ble_api/ble_api.hpp"
 #include "modules/others/qrcode_menu.h"
+#ifndef JS_MINI
 #include "modules/rf/rf_utils.h" // for initRfModule
+#endif
 #include "mykeyboard.h"
 #include "powerSave.h"
 #include "sd_functions.h"
 #include "settingsColor.h"
 #include "utils.h"
+#ifndef JS_MINI
 #include <ELECHOUSE_CC1101_SRC_DRV.h>
+#endif
 #include <globals.h>
 #include <nvs.h>
 #if defined(HAS_RESISTIVE_TOUCH)
@@ -705,6 +709,7 @@ void setEvilGatewayIp() {
     loopOptions(options, bruceConfig.evilPortalGatewayIp == "192.168.4.1" ? 1 : 0);
 }
 
+#ifndef JS_MINI
 /*********************************************************************
 **  Function: setRFModuleMenu
 **  Handles Menu to set the RF module in use
@@ -778,6 +783,7 @@ void setRFFreqMenu() {
     bruceConfigPins.setRfFreq(433.92); // reset to default
     delay(1000);
 }
+#endif // !JS_MINI
 
 /*********************************************************************
 **  Function: setRFIDModuleMenu
@@ -1890,6 +1896,9 @@ void enableBLEAPI() {
         displayInfo("BLE API OFF", true);
     }
 }
+
+#endif // !defined(LITE_VERSION) (kept BLE API only)
+#if !defined(DISABLE_INTERPRETER) && (!defined(LITE_VERSION) || defined(KEEP_JS))
 
 bool appStoreInstalled() {
     FS *fs;
