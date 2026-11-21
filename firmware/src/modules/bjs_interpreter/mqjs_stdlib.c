@@ -342,6 +342,7 @@ static const JSPropDef js_exports[] = {
 static const JSClassDef js_exports_obj =
     JS_OBJECT_DEF("Exports", js_exports);
 
+#if !defined(JS_MINI) // not kept in the light build
 const JSPropDef js_audio[] = {
     JS_CFUNC_DEF("playFile", 1, native_playAudioFile),
     JS_CFUNC_DEF("tone", 3, native_tone),
@@ -349,6 +350,8 @@ const JSPropDef js_audio[] = {
 };
 
 const JSClassDef js_audio_obj = JS_OBJECT_DEF("Audio", js_audio);
+#endif // !JS_MINI // audio
+
 
 const JSPropDef js_keyboard[] = {
     JS_CFUNC_DEF("keyboard", 4, native_keyboard),
@@ -373,6 +376,7 @@ const JSPropDef js_notification[] = {
 
 const JSClassDef js_notification_obj = JS_OBJECT_DEF("Notification", js_notification);
 
+#if !defined(JS_MINI) // not kept in the light build
 /* BadUSB module */
 static const JSPropDef js_badusb[] = {
     JS_CFUNC_DEF("setup", 0, native_badusbSetup),
@@ -388,7 +392,10 @@ static const JSPropDef js_badusb[] = {
 };
 
 const JSClassDef js_badusb_obj = JS_OBJECT_DEF("BadUSB", js_badusb);
+#endif // !JS_MINI // badusb
 
+
+#if !defined(JS_MINI) // not kept in the light build
 /* IR module */
 static const JSPropDef js_ir[] = {
     JS_CFUNC_DEF("read", 1, native_irRead),
@@ -399,6 +406,8 @@ static const JSPropDef js_ir[] = {
 };
 
 const JSClassDef js_ir_obj = JS_OBJECT_DEF("IR", js_ir);
+#endif // !JS_MINI // ir
+
 
 /* Dialog module */
 static const JSPropDef js_dialog[] = {
@@ -419,6 +428,7 @@ static const JSPropDef js_dialog[] = {
 
 const JSClassDef js_dialog_obj = JS_OBJECT_DEF("Dialog", js_dialog);
 
+#if !defined(JS_MINI) // not kept in the light build
 const JSPropDef js_subghz[] = {
     JS_CFUNC_DEF("transmitFile", 1, native_subghzTransmitFile),
     JS_CFUNC_DEF("transmit", 4, native_subghzTransmit),
@@ -436,7 +446,10 @@ const JSPropDef js_subghz[] = {
 };
 
 const JSClassDef js_subghz_obj = JS_OBJECT_DEF("SubGHz", js_subghz);
+#endif // !JS_MINI // subghz
 
+
+#if !defined(JS_MINI) // not kept in the light build
 const JSPropDef js_serial[] = {
     JS_CFUNC_DEF("print", 1, native_serialPrint),
     JS_CFUNC_DEF("println", 1, native_serialPrintln),
@@ -447,6 +460,8 @@ const JSPropDef js_serial[] = {
 };
 
 const JSClassDef js_serial_obj = JS_OBJECT_DEF("Serial", js_serial);
+#endif // !JS_MINI // serial
+
 
 const JSPropDef js_storage[] = {
     JS_CFUNC_DEF("readdir", 2, native_storageReaddir),
@@ -478,6 +493,7 @@ static const JSPropDef js_device[] = {
 
 const JSClassDef js_device_obj = JS_OBJECT_DEF("Device", js_device);
 
+#if !defined(JS_MINI) // not kept in the light build
 /* GPIO module */
 static const JSPropDef js_gpio[] = {
     JS_CFUNC_DEF("pinMode", 3, native_pinMode),
@@ -503,7 +519,10 @@ static const JSPropDef js_gpio[] = {
 };
 
 const JSClassDef js_gpio_obj = JS_OBJECT_DEF("GPIO", js_gpio);
+#endif // !JS_MINI // gpio
 
+
+#if !defined(JS_MINI) // not kept in the light build
 /* UART module */
 static const JSPropDef js_uart[] = {
     JS_CFUNC_DEF("begin", 3, native_uart_begin),
@@ -516,7 +535,10 @@ static const JSPropDef js_uart[] = {
 };
 
 const JSClassDef js_uart_obj = JS_OBJECT_DEF("UART", js_uart);
+#endif // !JS_MINI // uart
 
+
+#if !defined(JS_MINI) // not kept in the light build
 /* I2C module */
 static const JSPropDef js_i2c[] = {
     JS_CFUNC_DEF("begin", 3, native_i2c_begin),
@@ -528,6 +550,7 @@ static const JSPropDef js_i2c[] = {
 };
 
 const JSClassDef js_i2c_obj = JS_OBJECT_DEF("I2C", js_i2c);
+#endif // !JS_MINI // i2c
 
 /* WiFi module */
 static const JSPropDef js_wifi[] = {
@@ -544,6 +567,7 @@ static const JSPropDef js_wifi[] = {
 
 const JSClassDef js_wifi_obj = JS_OBJECT_DEF("WiFi", js_wifi);
 
+#if !defined(JS_MINI) // not kept in the light build
 /* Mic module */
 static const JSPropDef js_mic[] = {
     JS_CFUNC_DEF("recordWav", 2, native_micRecordWav),
@@ -552,7 +576,10 @@ static const JSPropDef js_mic[] = {
 };
 
 const JSClassDef js_mic_obj = JS_OBJECT_DEF("Mic", js_mic);
+#endif // !JS_MINI // mic
 
+
+#if !defined(JS_MINI) // not kept in the light build
 /* Rfid module */
 static const JSPropDef js_rfid[] = {
     JS_CFUNC_DEF("read", 1, native_rfidRead),
@@ -574,6 +601,8 @@ static const JSPropDef js_rfid[] = {
 };
 
 const JSClassDef js_rfid_obj = JS_OBJECT_DEF("Rfid", js_rfid);
+#endif // !JS_MINI // rfid
+
 
 /* Runtime module */
 static const JSPropDef js_runtime[] = {
@@ -596,6 +625,7 @@ static const JSPropDef js_ble[] = {
 
 const JSClassDef js_ble_obj = JS_OBJECT_DEF("BLE", js_ble);
 
+#if !defined(JS_MINI) // not kept in the light build
 /* NRF24 module */
 static const JSPropDef js_nrf24[] = {
     JS_CFUNC_DEF("begin", 1, native_nrf24Begin),
@@ -607,7 +637,10 @@ static const JSPropDef js_nrf24[] = {
 };
 
 const JSClassDef js_nrf24_obj = JS_OBJECT_DEF("NRF24", js_nrf24);
+#endif // !JS_MINI // nrf24
 
+
+#if !defined(JS_MINI) // not kept in the light build
 /* LED module */
 static const JSPropDef js_led[] = {
     JS_CFUNC_DEF("setColor", 3, native_ledSetColor),
@@ -618,6 +651,8 @@ static const JSPropDef js_led[] = {
 };
 
 const JSClassDef js_led_obj = JS_OBJECT_DEF("LED", js_led);
+#endif // !JS_MINI // led
+
 
 /* Menu module (native Bruce UI) */
 static const JSPropDef js_menu[] = {
@@ -853,27 +888,15 @@ static const JSPropDef js_global_object[] = {
     JS_CFUNC_DEF("exit", 0, native_exit ),
 
     /* Modules */
-    JS_PROP_CLASS_DEF("audio", &js_audio_obj),
-    JS_PROP_CLASS_DEF("badusb", &js_badusb_obj),
     JS_PROP_CLASS_DEF("device", &js_device_obj),
     JS_PROP_CLASS_DEF("display", &js_display_obj),
     JS_PROP_CLASS_DEF("dialog", &js_dialog_obj),
-    JS_PROP_CLASS_DEF("gpio", &js_gpio_obj),
-    JS_PROP_CLASS_DEF("i2c", &js_i2c_obj),
-    JS_PROP_CLASS_DEF("ir", &js_ir_obj),
     JS_PROP_CLASS_DEF("keyboard", &js_keyboard_obj),
     JS_PROP_CLASS_DEF("notification", &js_notification_obj),
-    JS_PROP_CLASS_DEF("mic", &js_mic_obj),
-    JS_PROP_CLASS_DEF("rfid", &js_rfid_obj),
     JS_PROP_CLASS_DEF("runtime", &js_runtime_obj),
-    JS_PROP_CLASS_DEF("serial", &js_serial_obj),
     JS_PROP_CLASS_DEF("storage", &js_storage_obj),
-    JS_PROP_CLASS_DEF("subghz", &js_subghz_obj),
-    JS_PROP_CLASS_DEF("uart", &js_uart_obj),
     JS_PROP_CLASS_DEF("wifi", &js_wifi_obj),
     JS_PROP_CLASS_DEF("ble", &js_ble_obj),
-    JS_PROP_CLASS_DEF("nrf24", &js_nrf24_obj),
-    JS_PROP_CLASS_DEF("led", &js_led_obj),
     JS_PROP_CLASS_DEF("menu", &js_menu_obj),
 
     // MUST BE IN THE SAME ORDER AS IN THE user_classes_js FILE they cannot be guarded by #ifdef LITE_VERSION

@@ -125,7 +125,9 @@ void setMacAddressMenu();
 
 #if !defined(LITE_VERSION)
 void enableBLEAPI();
+#endif
 
+#if !defined(DISABLE_INTERPRETER) && (!defined(LITE_VERSION) || defined(KEEP_JS))
 bool appStoreInstalled();
 
 void installAppStoreJS();

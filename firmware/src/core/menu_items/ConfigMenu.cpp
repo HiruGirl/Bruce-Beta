@@ -35,7 +35,7 @@ void ConfigMenu::optionsMenu() {
             {"Power",         [this]() { powerMenu(); }    },
         };
 
-#if !defined(LITE_VERSION)
+#if !defined(DISABLE_INTERPRETER) && (!defined(LITE_VERSION) || defined(KEEP_JS))
         if (!appStoreInstalled()) {
             localOptions.push_back({"Install App Store", []() { installAppStoreJS(); }});
         }

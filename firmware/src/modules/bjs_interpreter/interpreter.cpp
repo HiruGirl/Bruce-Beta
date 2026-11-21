@@ -53,13 +53,18 @@ void interpreterHandler(void *pvParameters) {
 
     size_t max_alloc = psramAvailable ? ESP.getMaxAllocPsram() : ESP.getMaxAllocHeap();
     size_t mem_size;
-    if (max_alloc < 150000) {
-        mem_size = (max_alloc / 2 < 65536) ? max_alloc - 8192 : 65536;
-    } else if (psramAvailable && max_alloc > 1000000) {
+    if (psramAvailable && max_alloc > 1000000) {
         // PSRAM available with plenty of space: allocate up to 512KB for large scripts
         mem_size = (max_alloc > 4000000) ? 512000 : 256000;
+    } else if (max_alloc < 16384) {
+        // No room for a JS engine: refuse early and surface the error (below).
+        mem_size = 0;
     } else {
-        mem_size = 100000;
+        // No-PSRAM (or tiny-PSRAM) boards: use the largest heap that leaves
+        // headroom for the things that malloc after the context is created,
+        // capped at 100KB so a big script can't starve the rest of the system.
+        mem_size = max_alloc - 8192;
+        if (mem_size > 100000) mem_size = 100000;
     }
     log_d(
         "JS engine memory: %zu bytes (max_alloc: %zu, psram: %s)",

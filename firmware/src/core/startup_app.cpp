@@ -13,6 +13,7 @@
 #include "core/wifi/webInterface.h"
 #include "core/wifi/wifi_common.h"
 #include "modules/bjs_interpreter/interpreter.h"
+#ifndef JS_MINI
 #include "modules/gps/gps_tracker.h"
 #include "modules/gps/wardriving.h"
 #include "modules/pwnagotchi/pwnagotchi.h"
@@ -20,6 +21,7 @@
 #include "modules/rfid/PN532KillerTools.h"
 #include "modules/rfid/pn532ble.h"
 #include "modules/wifi/sniffer.h"
+#endif
 #ifdef SOC_USB_OTG_SUPPORTED
 #include "core/massStorage.h"
 #endif

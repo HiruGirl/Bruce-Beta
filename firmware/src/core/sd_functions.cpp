@@ -3,16 +3,20 @@
 #include "display.h" // using displayRedStripe as error msg
 #include "modules/badusb_ble/ducky_typer.h"
 #include "modules/bjs_interpreter/interpreter.h"
+#ifndef JS_MINI
 #include "modules/gps/wdgwars.h"
 #include "modules/gps/wigle.h"
 #include "modules/ir/TV-B-Gone.h"
 #include "modules/ir/custom_ir.h"
+#endif
 #include "modules/others/audio.h"
 #if defined(HAS_SPEAKER)
 #include "modules/others/audio_player.h"
 #endif
 #include "modules/others/qrcode_menu.h"
+#ifndef JS_MINI
 #include "modules/rf/rf_send.h"
+#endif
 #include "mykeyboard.h" // using keyboard when calling rename
 #include "passwords.h"
 #include "scrollableTextArea.h"
@@ -746,6 +750,7 @@ String loopSD(FS &fs, bool filePicker, const String &allowed_ext, String rootPat
                                                      while (!check(AnyKeyPress))
                                                          vTaskDelay(10 / portTICK_PERIOD_MS);
                                                  }});
+#ifndef JS_MINI
             if (filepath.endsWith(".ir")) {
                 options.insert(options.begin(), {"IR Choose cmd", [&]() {
                                                      delay(200);
@@ -763,6 +768,8 @@ String loopSD(FS &fs, bool filePicker, const String &allowed_ext, String rootPat
 
                                                      if (readSubFile(&fs, filepath, data)) txSubFile(data);
                                                  }});
+#endif
+#ifndef JS_MINI
             if (filepath.endsWith(".csv")) {
                 options.insert(options.begin(), {"Wigle Upload", [&]() {
                                                      delay(200);
@@ -785,6 +792,7 @@ String loopSD(FS &fs, bool filePicker, const String &allowed_ext, String rootPat
                                                      wdg.upload_all(&fs, Folder);
                                                  }});
             }
+#endif
 #if !defined(DISABLE_INTERPRETER) && (!defined(LITE_VERSION) || defined(KEEP_JS))
             if (filepath.endsWith(".bjs") || filepath.endsWith(".js")) {
                 options.insert(options.begin(), {"JS Script Run", [&]() {

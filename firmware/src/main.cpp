@@ -172,7 +172,9 @@ volatile int tftHeight = TFT_WIDTH;
 #include "core/wifi/wifi_common.h"
 #include "modules/bjs_interpreter/interpreter.h" // for JavaScript interpreter
 #include "modules/others/audio.h"                // for playAudioFile
+#ifndef JS_MINI
 #include "modules/rf/rf_utils.h"                 // for initCC1101once
+#endif
 #include <Wire.h>
 
 /*********************************************************************
@@ -240,9 +242,11 @@ void setup_gpio() {
     bool hasSysI2C = bruceConfigPins.sys_i2c.sda >= 0 && bruceConfigPins.sys_i2c.scl >= 0;
     ioExpander.init(IO_EXPANDER_ADDRESS, hasSysI2C ? getSysI2CBus() : &Wire);
 
+#ifndef JS_MINI
     initCC1101once(acquireSPIBus(
         bruceConfigPins.CC1101_bus.sck, bruceConfigPins.CC1101_bus.miso, bruceConfigPins.CC1101_bus.mosi
     ));
+#endif
     // acquireSPIBus() returns nullptr when these pins have no hardware controller left (e.g.
     // ARDUINO_M5STICK_C_PLUS and others that don't share SPI with the display/SD/aux bus);
     // initCC1101once(NULL) lets the driver fall back to managing the default SPI object itself.

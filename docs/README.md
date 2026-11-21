@@ -34,8 +34,13 @@ and re-publish the Pages site (Actions/manual push of the `docs/` folder).
 
 ## What this build keeps
 
-WiFi (AP + station), BLE, the JS interpreter (mquickjs) with storage/display/BLE/WiFi helpers,
+WiFi (AP + station), BLE, the JS interpreter (mquickjs) with storage/display/BLE/WiFi helpers
+(plus the kept interpreter modules: device, dialog, keyboard, notification, runtime, menu,
+math, globals, buffer, and the Sprite/TextViewer/Gif/Timers user classes),
 the always-on Clock startup app, and the "Others" menu (QR codes, Megalodon).
+
+The **App Store** is kept: `Config → Install App Store` downloads the `App Store.bin`
+to `/BruceJS/Tools/` and it runs from `JS Interpreter → Tools`.
 
 What it drops (from the trimmed upstream) — hidden from the main menu and everything
 tied to those features: RF/SubGHz, NRF24, IR, RFID, GPS, LoRa, FM, Ethernet/ARP scan,
