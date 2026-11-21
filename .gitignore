@@ -1,0 +1,19 @@
+# Build environments / dependency caches
+.venv/
+.pio/
+.pioenvs/
+upstream/
+**/node_modules/
+
+# Merged firmware images are build artifacts
+*.bin
+firmware/Bruce-*.bin
+docs/firmware/
+
+# Editor state
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
