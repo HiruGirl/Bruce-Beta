@@ -4,12 +4,14 @@ Build the Bruce Light (CYD-2432S028 JS-Lite) image and drop it for the web flash
 
 USAGE
 -----
-Run this from anywhere (e.g. from a GitHub Codespace on Ubuntu):
+Run it from the repository root, or from firmware/ — anywhere it can find
+firmware/platformio.ini (its own directory is the most common case).
 
-    python3 build_light_image.py                    # setup + build + drop (local)
-    python3 build_light_image.py --commit           # also git add + commit the drop-in
-    python3 build_light_image.py --commit --push    # then push the commit to origin
-    python3 build_light_image.py --dry-run          # only print what it would do
+    python3 firmware/build_light_image.py           # from the repo root: setup + build + drop
+    cd firmware && python3 build_light_image.py     # same thing, from inside firmware/
+    python3 firmware/build_light_image.py --commit  # also git add + commit the drop-in
+    python3 firmware/build_light_image.py --commit --push   # then push the commit to origin
+    python3 firmware/build_light_image.py --dry-run # only print what it would do
 
 WHAT IT DOES
 ------------
