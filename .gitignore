@@ -17,3 +17,7 @@ firmware/Bruce-*.bin
 # OS
 .DS_Store
 Thumbs.db
+
+# codespace script build log
+.tmp/
+__pycache__/
